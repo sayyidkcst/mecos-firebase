@@ -1,208 +1,2453 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MECOS Table with Firebase</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #fff8e1;
-    }
-    h1 {
-      color: #b8860b;
-      text-align: center;
-    }
-    .top-bar {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      gap: 10px;
-    }
-    .top-bar input, .top-bar button, .top-bar div {
-      height: 40px;
-      font-size: 16px;
-    }
-    .top-bar button {
-      background-color: #ffd700;
-      border: none;
-      padding: 0 20px;
-      cursor: pointer;
-    }
-    .total-display {
-      font-weight: bold;
-      color: #b8860b;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
-      text-align: center;
-    }
-    th {
-      background-color: #fff3cd;
-      color: #8b6508;
-    }
-    .popup {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: white;
-      border: 2px solid #b8860b;
-      padding: 20px;
-      z-index: 10;
-    }
-    .popup input {
-      display: block;
-      margin-bottom: 10px;
-      width: 100%;
-      height: 30px;
-      font-size: 16px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Vault | Secure Certificate Management</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --secondary: #7209b7;
+            --accent: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --success: #4cc9f0;
+            --danger: #ff595e;
+            --warning: #ff9e00;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.12);
+            --transition: all 0.3s ease;
+            --border-radius: 12px;
+            --sidebar-width: 280px;
+            --header-height: 70px;
+            --bottom-nav-height: 70px;
+        }
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-database.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "test-key",
-      authDomain: "test-app.firebaseapp.com",
-      databaseURL: "https://test-app-default-rtdb.firebaseio.com",
-      projectId: "test-app",
-      storageBucket: "test-app.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:testapp"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-  </script>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Layout Container */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Desktop Sidebar */
+        .desktop-sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            padding: 30px 20px;
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 5px 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .desktop-sidebar .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .desktop-sidebar .logo i {
+            font-size: 2.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 50%;
+        }
+
+        .desktop-sidebar h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .desktop-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .desktop-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 18px 20px;
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .desktop-nav-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .desktop-nav-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .desktop-nav-item i {
+            font-size: 1.3rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .desktop-user-info {
+            margin-top: auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius);
+            display: none;
+        }
+
+        .desktop-user-info .user-email {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        /* Desktop Main Content */
+        .desktop-main {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 30px;
+            display: none;
+        }
+
+        /* Mobile Header - REMOVED */
+        .mobile-header {
+            display: none !important;
+        }
+
+        /* Mobile Main Content */
+        .mobile-main {
+            width: 100%;
+            padding: 20px 20px calc(var(--bottom-nav-height) + 20px); /* Removed top padding for header */
+            min-height: 100vh;
+        }
+
+        /* Bottom Navigation (Mobile Only) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--bottom-nav-height);
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 12px;
+            transition: var(--transition);
+            cursor: pointer;
+            min-width: 70px;
+        }
+
+        .nav-item i {
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+
+        .nav-item .nav-label {
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            background: rgba(67, 97, 238, 0.08);
+        }
+
+        /* Sections */
+        .section {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Common Components */
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 30px;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            border-radius: 2px;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .card:hover {
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid var(--light-gray);
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .input-with-icon {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        /* Button Styles */
+        .btn {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 16px 28px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--gray);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .btn-google {
+            background: #ffffff;
+            color: #757575;
+            border: 2px solid #e0e0e0;
+            position: relative;
+        }
+
+        .btn-google:hover {
+            background: #f8f9fa;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-google i {
+            background: conic-gradient(from -45deg, #ea4335 110deg, #4285f4 90deg 180deg, #34a853 180deg 270deg, #fbbc05 270deg) 73% 55%/150% 150% no-repeat;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.2rem;
+        }
+
+        /* Compact button styles */
+        .btn-compact {
+            padding: 10px 15px;
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        .btn-icon-only {
+            padding: 10px;
+            width: 44px;
+            height: 44px;
+            justify-content: center;
+        }
+
+        .btn-icon-only i {
+            margin: 0;
+        }
+
+        /* Login Page Styles */
+        .login-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 40px 0;
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .login-logo i {
+            font-size: 4rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 20px;
+        }
+
+        .login-logo h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+
+        .login-logo p {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 25px 0;
+            color: var(--gray);
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .divider span {
+            padding: 0 15px;
+            font-size: 0.9rem;
+        }
+
+        /* Certificate Grid */
+        .certificates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .certificate-card {
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+        }
+
+        .certificate-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .certificate-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .certificate-content {
+            padding: 20px;
+        }
+
+        .certificate-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .certificate-detail {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--gray);
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .certificate-detail i {
+            color: var(--primary);
+            width: 20px;
+        }
+
+        .certificate-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .certificate-actions .btn {
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            min-height: 44px;
+            min-width: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-certificate-btn {
+            background: var(--danger);
+            border: none;
+        }
+
+        .delete-certificate-btn:hover {
+            background: #ff4444;
+            transform: translateY(-2px);
+        }
+
+        /* Expiry date warning styles */
+        .expiry-warning {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .expiry-soon {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .expiry-good {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            transform: translateY(30px);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .modal-header {
+            padding: 25px 30px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            background: var(--light);
+            border-top: 1px solid var(--light-gray);
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            display: flex;
+            gap: 15px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: var(--gray);
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--light-gray);
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--gray);
+        }
+
+        /* Message Box */
+        .message {
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin: 20px 0;
+            display: none;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .message.success {
+            background-color: rgba(76, 201, 240, 0.1);
+            color: #0a7c8c;
+            border-left-color: var(--success);
+        }
+
+        .message.error {
+            background-color: rgba(255, 89, 94, 0.1);
+            color: #c82333;
+            border-left-color: var(--danger);
+        }
+
+        /* File Upload */
+        .file-upload-area {
+            border: 2px dashed var(--light-gray);
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .file-upload-area i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            opacity: 0.7;
+        }
+
+        .file-preview {
+            width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid var(--light-gray);
+        }
+
+        /* Floating Action Button (Mobile) */
+        .fab {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.3);
+            cursor: pointer;
+            transition: var(--transition);
+            z-index: 100;
+            border: none;
+            display: none;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 30px rgba(67, 97, 238, 0.4);
+        }
+
+        /* Desktop Add Button */
+        .desktop-add-btn {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            padding: 20px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(67, 97, 238, 0.3);
+            z-index: 100;
+            display: none;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 768px) {
+            /* Mobile Styles */
+            .mobile-main,
+            .bottom-nav {
+                display: block;
+            }
+            
+            .desktop-sidebar,
+            .desktop-main,
+            .desktop-add-btn {
+                display: none;
+            }
+            
+            .mobile-header {
+                display: none !important;
+            }
+            
+            .certificates-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .stat-card {
+                padding: 20px 15px;
+            }
+            
+            .stat-number {
+                font-size: 2rem;
+            }
+            
+            .fab {
+                display: flex;
+            }
+            
+            .login-container {
+                padding: 20px;
+            }
+            
+            /* Ensure buttons have proper spacing on mobile */
+            .certificate-actions {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .certificate-actions .btn {
+                flex: 1;
+                min-width: calc(50% - 4px);
+            }
+        }
+
+        @media (min-width: 769px) {
+            /* Desktop Styles */
+            .desktop-sidebar,
+            .desktop-main,
+            .desktop-add-btn {
+                display: flex;
+            }
+            
+            .mobile-main,
+            .bottom-nav,
+            .fab {
+                display: none;
+            }
+            
+            .mobile-header {
+                display: none !important;
+            }
+            
+            .app-container {
+                display: flex;
+            }
+            
+            .certificates-grid {
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            }
+        }
+
+        /* Tablet Styles */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .desktop-sidebar {
+                width: 250px;
+            }
+            
+            .desktop-main {
+                margin-left: 250px;
+            }
+            
+            .certificates-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+        }
+
+        /* Large Desktop */
+        @media (min-width: 1440px) {
+            .certificates-grid {
+                grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            }
+            
+            .desktop-sidebar {
+                width: 320px;
+            }
+            
+            .desktop-main {
+                margin-left: 320px;
+                padding: 40px;
+            }
+        }
+
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .mt-1 { margin-top: 10px; }
+        .mt-2 { margin-top: 20px; }
+        .mt-3 { margin-top: 30px; }
+        .mb-1 { margin-bottom: 10px; }
+        .mb-2 { margin-bottom: 20px; }
+        .mb-3 { margin-bottom: 30px; }
+        .d-flex { display: flex; }
+        .flex-column { flex-direction: column; }
+        .align-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-1 { gap: 10px; }
+        .gap-2 { gap: 20px; }
+        .gap-3 { gap: 30px; }
+        .w-100 { width: 100%; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--light-gray);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, var(--primary-dark), #5a08a0);
+        }
+    </style>
 </head>
 <body>
-  <h1>MECOS</h1>
+    <div class="app-container">
+        <!-- Desktop Sidebar -->
+        <aside class="desktop-sidebar">
+            <div class="logo">
+                <i class="fas fa-certificate"></i>
+                <h1>Certificate Vault</h1>
+            </div>
+            
+            <nav class="desktop-nav" id="desktop-nav">
+                <!-- Navigation items will be loaded dynamically -->
+            </nav>
+            
+            <div class="desktop-user-info" id="desktop-user-info">
+                <div class="user-email" id="desktop-user-email"></div>
+                <button id="desktop-logout-btn" class="btn btn-danger btn-block mt-2 btn-icon-only">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </aside>
 
-  <div class="top-bar">
-    <input type="text" id="searchInput" placeholder="Search by Date (DD-MM-YYYY)">
-    <button onclick="openPopup()">Add New</button>
-    <button onclick="window.print()">Print</button>
-    <div class="total-display" id="totalAmount">Total: 0.00</div>
-  </div>
+        <!-- Desktop Main Content -->
+        <main class="desktop-main" id="desktop-main">
+            <!-- Content will be loaded dynamically -->
+        </main>
 
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th>S/N</th>
-        <th>Date</th>
-        <th>Amount</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+        <!-- Mobile Header - REMOVED -->
+        <header class="mobile-header">
+            <!-- Removed content -->
+        </header>
 
-  <!-- Popup Form -->
-  <div class="popup" id="popup">
-    <form id="entryForm">
-      <label>Date (DD-MM-YYYY):</label>
-      <input type="text" id="entryDate" placeholder="DD-MM-YYYY" required>
-      <label>Amount:</label>
-      <input type="number" id="entryAmount" required>
-      <button type="submit">Save</button>
-      <button type="button" onclick="closePopup()">Cancel</button>
-    </form>
-  </div>
+        <!-- Mobile Main Content -->
+        <main class="mobile-main">
+            <!-- Login Section -->
+            <section id="mobile-login-section" class="section active">
+                <div class="login-container">
+                    <div class="login-logo">
+                        <i class="fas fa-certificate"></i>
+                        <h1>Certificate Vault</h1>
+                        <p>Secure Certificate Management</p>
+                    </div>
+                    
+                    <div id="mobile-auth-message" class="message"></div>
+                    
+                    <div class="card">
+                        <div class="form-group">
+                            <label for="mobile-auth-email" class="form-label">
+                                <i class="fas fa-envelope"></i> Email Address
+                            </label>
+                            <input type="email" id="mobile-auth-email" class="form-input" placeholder="your@email.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mobile-auth-password" class="form-label">
+                                <i class="fas fa-lock"></i> Password
+                            </label>
+                            <div class="input-with-icon">
+                                <input type="password" id="mobile-auth-password" class="form-input" placeholder="••••••••">
+                                <i class="fas fa-eye input-icon password-toggle" id="mobile-toggle-auth-password"></i>
+                            </div>
+                        </div>
+                        
+                        <button id="mobile-login-btn" class="btn btn-block mb-2">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        
+                        <button id="mobile-register-btn" class="btn btn-secondary btn-block">
+                            <i class="fas fa-user-plus"></i> Create Account
+                        </button>
+                        
+                        <div class="divider">
+                            <span>Or continue with</span>
+                        </div>
+                        
+                        <button id="mobile-google-login-btn" class="btn btn-google btn-block">
+                            <i class="fab fa-google"></i> Sign in with Google
+                        </button>
+                    </div>
+                </div>
+            </section>
 
-  <script>
-    const tableBody = document.querySelector('#dataTable tbody');
-    const totalDisplay = document.getElementById('totalAmount');
-    const searchInput = document.getElementById('searchInput');
+            <!-- Certificates Section -->
+            <section id="mobile-certificates-section" class="section">
+                <div class="user-card card mb-3" id="mobile-user-card" style="display: none;">
+                    <div class="d-flex align-center justify-between">
+                        <div class="d-flex align-center gap-2">
+                            <div class="user-avatar" style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--dark);">Welcome</div>
+                                <div style="color: var(--primary); font-weight: 600;" id="mobile-user-email"></div>
+                            </div>
+                        </div>
+                        <button id="mobile-logout-btn" class="btn btn-danger btn-icon-only">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="stats-grid mb-3" id="mobile-stats-grid" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-number" id="mobile-total-certs">0</div>
+                        <div class="stat-label">Certificates</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="mobile-total-size">0 KB</div>
+                        <div class="stat-label">Total Size</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="mobile-avg-size">0 KB</div>
+                        <div class="stat-label">Avg. Size</div>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-center justify-between mb-3">
+                    <h2 class="section-title mb-0">My Certificates</h2>
+                </div>
+                
+                <div id="mobile-cert-message" class="message"></div>
+                
+                <div id="mobile-certificates-container">
+                    <div id="mobile-certificates-list" class="certificates-grid">
+                        <!-- Certificates will be loaded here -->
+                    </div>
+                </div>
+            </section>
 
-    function formatCurrency(value) {
-      return parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 2 });
-    }
+            <!-- Security Section -->
+            <section id="mobile-security-section" class="section">
+                <h2 class="section-title">Security</h2>
+                
+                <div id="mobile-password-message" class="message"></div>
+                
+                <div class="card">
+                    <div class="form-group">
+                        <label for="mobile-current-password" class="form-label">
+                            <i class="fas fa-lock"></i> Current Password
+                        </label>
+                        <div class="input-with-icon">
+                            <input type="password" id="mobile-current-password" class="form-input" placeholder="••••••••">
+                            <i class="fas fa-eye input-icon password-toggle" id="mobile-toggle-current-password"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mobile-new-password" class="form-label">
+                            <i class="fas fa-key"></i> New Password
+                        </label>
+                        <div class="input-with-icon">
+                            <input type="password" id="mobile-new-password" class="form-input" placeholder="••••••••">
+                            <i class="fas fa-eye input-icon password-toggle" id="mobile-toggle-new-password"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mobile-confirm-password" class="form-label">
+                            <i class="fas fa-key"></i> Confirm Password
+                        </label>
+                        <div class="input-with-icon">
+                            <input type="password" id="mobile-confirm-password" class="form-input" placeholder="••••••••">
+                            <i class="fas fa-eye input-icon password-toggle" id="mobile-toggle-confirm-password"></i>
+                        </div>
+                    </div>
+                    
+                    <button id="mobile-change-password-btn" class="btn btn-block">
+                        <i class="fas fa-sync-alt"></i> Update Password
+                    </button>
+                </div>
+            </section>
+        </main>
 
-    function updateTotal() {
-      let total = 0;
-      tableBody.querySelectorAll('tr').forEach(row => {
-        if (row.style.display !== 'none') {
-          const amountCell = row.querySelector('td.amount');
-          if (amountCell) total += parseFloat(amountCell.textContent.replace(/,/g, '')) || 0;
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="bottom-nav">
+            <a class="nav-item active" data-section="login">
+                <i class="fas fa-user"></i>
+                <span class="nav-label">Account</span>
+            </a>
+            <a class="nav-item" data-section="certificates">
+                <i class="fas fa-certificate"></i>
+                <span class="nav-label">Certificates</span>
+            </a>
+            <a class="nav-item" data-section="security">
+                <i class="fas fa-shield-alt"></i>
+                <span class="nav-label">Security</span>
+            </a>
+        </nav>
+
+        <!-- Floating Action Button (Mobile) -->
+        <button class="fab" id="mobile-fab-add-cert" style="display: none;">
+            <i class="fas fa-plus"></i>
+        </button>
+
+        <!-- Desktop Add Button -->
+        <button class="btn desktop-add-btn" id="desktop-add-cert" style="display: none;">
+            <i class="fas fa-plus-circle"></i> Add Certificate
+        </button>
+    </div>
+
+    <!-- Add Certificate Modal -->
+    <div class="modal-overlay" id="certificate-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-plus-circle"></i>
+                    Add New Certificate
+                </div>
+                <button class="modal-close" id="close-certificate-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="certificate-form">
+                    <div id="modal-message" class="message"></div>
+                    
+                    <div class="form-group">
+                        <label for="modal-cert-title" class="form-label">
+                            <i class="fas fa-heading"></i> Certificate Title *
+                        </label>
+                        <input type="text" id="modal-cert-title" class="form-input" placeholder="JavaScript Certification, AWS Certified...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal-cert-number" class="form-label">
+                            <i class="fas fa-hashtag"></i> Certificate Number *
+                        </label>
+                        <input type="text" id="modal-cert-number" class="form-input" placeholder="CERT-12345, AWS-67890...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal-cert-issuer" class="form-label">
+                            <i class="fas fa-building"></i> Issuing Organization
+                        </label>
+                        <input type="text" id="modal-cert-issuer" class="form-input" placeholder="Udemy, Coursera, AWS...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal-expiry-date" class="form-label">
+                            <i class="fas fa-calendar-times"></i> Expiry Date *
+                        </label>
+                        <input type="date" id="modal-expiry-date" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-image"></i> Certificate Image *
+                        </label>
+                        <div class="file-upload-area" id="file-upload-area">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p style="margin-bottom: 10px; font-size: 1.1rem;">Upload Certificate Image</p>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Drag & drop or click to browse</p>
+                            <p style="color: var(--gray); font-size: 0.8rem; margin-top: 5px;">Max 2MB • JPG, PNG, WebP</p>
+                            <input type="file" id="modal-cert-image-file" style="display: none;" accept=".jpg,.jpeg,.png,.webp">
+                        </div>
+                        
+                        <div id="modal-image-preview-container" style="display: none;">
+                            <img id="modal-image-preview" class="file-preview" alt="Image preview">
+                            <div id="modal-image-size-info" style="text-align: center; font-size: 0.9rem; color: var(--gray); margin-top: 10px;"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-certificate-modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn" id="save-certificate-modal" disabled>
+                    <i class="fas fa-save"></i> Save Certificate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image View Modal -->
+    <div class="modal-overlay" id="image-view-modal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-expand"></i>
+                    Certificate View
+                </div>
+                <button class="modal-close" id="close-image-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <img id="full-size-image" src="" alt="Certificate" style="max-width: 100%; max-height: 70vh; border-radius: 8px;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8EgmKN9NBennYkCPKnMH7GpBAdTF_x0c",
+            authDomain: "certificate-manager-b4af4.firebaseapp.com",
+            databaseURL: "https://certificate-manager-b4af4-default-rtdb.firebaseio.com",
+            projectId: "certificate-manager-b4af4",
+            storageBucket: "certificate-manager-b4af4.firebasestorage.app",
+            messagingSenderId: "123648255960",
+            appId: "1:123648255960:web:ec24ae546f36e75108f4ad"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Function to get username from email (remove text after @)
+        function getUsernameFromEmail(email) {
+            if (!email) return '';
+            return email.split('@')[0];
         }
-      });
-      totalDisplay.textContent = `Total: ${formatCurrency(total)}`;
-    }
 
-    function renderRow(key, index, entry) {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${entry.date}</td>
-        <td class="amount">${formatCurrency(entry.amount)}</td>
-        <td><button onclick="deleteEntry('${key}')">Delete</button></td>
-      `;
-      tableBody.appendChild(row);
-    }
+        // Function to check expiry status
+        function getExpiryStatus(expiryDate) {
+            const today = new Date();
+            const expiry = new Date(expiryDate);
+            const timeDiff = expiry.getTime() - today.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            
+            if (daysDiff < 0) {
+                return { status: 'expired', days: daysDiff, className: 'expiry-warning' };
+            } else if (daysDiff <= 30) {
+                return { status: 'soon', days: daysDiff, className: 'expiry-soon' };
+            } else {
+                return { status: 'good', days: daysDiff, className: 'expiry-good' };
+            }
+        }
 
-    function loadEntries() {
-      tableBody.innerHTML = '';
-      database.ref('entries').once('value', snapshot => {
-        let index = 0;
-        snapshot.forEach(child => {
-          renderRow(child.key, index++, child.val());
+        // Function to format expiry display
+        function formatExpiryDisplay(expiryDate) {
+            const expiry = new Date(expiryDate);
+            const formattedDate = expiry.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            const status = getExpiryStatus(expiryDate);
+            
+            let statusText = '';
+            if (status.status === 'expired') {
+                statusText = ` (Expired ${Math.abs(status.days)} days ago)`;
+            } else if (status.status === 'soon') {
+                statusText = ` (Expires in ${status.days} days)`;
+            } else {
+                statusText = ` (Expires in ${status.days} days)`;
+            }
+            
+            return { 
+                date: formattedDate, 
+                statusText: statusText,
+                className: status.className
+            };
+        }
+
+        // Global delete function - direct delete (no confirmation)
+        function deleteCertificateNow(certId, platform) {
+            console.log('Delete clicked for:', certId, 'on platform:', platform);
+            
+            const user = auth.currentUser;
+            if (!user) {
+                console.error('No user logged in');
+                return;
+            }
+            
+            // Show loading message
+            let messageElement;
+            if (platform === 'mobile') {
+                messageElement = document.getElementById('mobile-cert-message');
+            } else {
+                messageElement = document.getElementById('desktop-cert-message');
+            }
+            
+            if (messageElement) {
+                showMessage(messageElement, 'Deleting certificate...', 'success');
+            }
+            
+            // Delete from Firebase
+            database.ref('users/' + user.uid + '/certificates/' + certId).remove()
+                .then(() => {
+                    console.log('Certificate deleted from Firebase');
+                    
+                    // Remove from DOM immediately
+                    const certElement = document.getElementById(`cert-${certId}-${platform}`);
+                    if (certElement) {
+                        certElement.remove();
+                        console.log('Certificate removed from DOM');
+                    }
+                    
+                    // Show success message
+                    if (messageElement) {
+                        showMessage(messageElement, 'Certificate deleted!', 'success');
+                    }
+                    
+                    // Reload certificates to update stats
+                    if (platform === 'mobile') {
+                        loadMobileCertificates(user.uid);
+                    } else {
+                        loadDesktopCertificates(user.uid);
+                    }
+                })
+                .catch((error) => {
+                    console.error('Delete error:', error);
+                    if (messageElement) {
+                        showMessage(messageElement, 'Delete failed: ' + error.message, 'error');
+                    }
+                });
+        }
+
+        // Global view image function
+        function viewFullImage(base64Image, title) {
+            document.getElementById('full-size-image').src = base64Image;
+            document.getElementById('full-size-image').alt = title;
+            document.getElementById('image-view-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Make functions globally available
+        window.deleteCertificateNow = deleteCertificateNow;
+        window.viewFullImage = viewFullImage;
+
+        // Initialize UI based on device
+        function initializeUI() {
+            if (window.innerWidth >= 769) {
+                // Desktop view
+                document.querySelector('.desktop-sidebar').style.display = 'flex';
+                document.querySelector('.desktop-main').style.display = 'block';
+                document.querySelector('.desktop-add-btn').style.display = 'flex';
+                document.querySelector('.mobile-header').style.display = 'none';
+                document.querySelector('.mobile-main').style.display = 'none';
+                document.querySelector('.bottom-nav').style.display = 'none';
+                document.querySelector('.fab').style.display = 'none';
+                
+                // Load desktop content
+                loadDesktopContent();
+            } else {
+                // Mobile view
+                document.querySelector('.desktop-sidebar').style.display = 'none';
+                document.querySelector('.desktop-main').style.display = 'none';
+                document.querySelector('.desktop-add-btn').style.display = 'none';
+                document.querySelector('.mobile-header').style.display = 'none';
+                document.querySelector('.mobile-main').style.display = 'block';
+                document.querySelector('.bottom-nav').style.display = 'flex';
+            }
+        }
+
+        // Load desktop content
+        function loadDesktopContent() {
+            const user = auth.currentUser;
+            
+            if (!user) {
+                // Show login page on desktop
+                showDesktopLoginPage();
+            } else {
+                // Show certificates page on desktop
+                showDesktopCertificatesPage();
+                loadDesktopCertificates(user.uid);
+            }
+        }
+
+        // Show desktop login page
+        function showDesktopLoginPage() {
+            const desktopMain = document.getElementById('desktop-main');
+            desktopMain.innerHTML = `
+                <div class="login-container" style="max-width: 500px; margin: 0 auto;">
+                    <div class="login-logo">
+                        <i class="fas fa-certificate"></i>
+                        <h1>Certificate Vault</h1>
+                        <p>Secure Certificate Management</p>
+                    </div>
+                    
+                    <div id="desktop-auth-message" class="message"></div>
+                    
+                    <div class="card">
+                        <div class="form-group">
+                            <label for="desktop-auth-email" class="form-label">
+                                <i class="fas fa-envelope"></i> Email Address
+                            </label>
+                            <input type="email" id="desktop-auth-email" class="form-input" placeholder="your@email.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="desktop-auth-password" class="form-label">
+                                <i class="fas fa-lock"></i> Password
+                            </label>
+                            <div class="input-with-icon">
+                                <input type="password" id="desktop-auth-password" class="form-input" placeholder="••••••••">
+                                <i class="fas fa-eye input-icon password-toggle" id="desktop-toggle-auth-password"></i>
+                            </div>
+                        </div>
+                        
+                        <button id="desktop-login-btn" class="btn btn-block mb-2">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        
+                        <button id="desktop-register-btn" class="btn btn-secondary btn-block">
+                            <i class="fas fa-user-plus"></i> Create Account
+                        </button>
+                        
+                        <div class="divider">
+                            <span>Or continue with</span>
+                        </div>
+                        
+                        <button id="desktop-google-login-btn" class="btn btn-google btn-block">
+                            <i class="fab fa-google"></i> Sign in with Google
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Update sidebar for logged out state
+            updateDesktopSidebar(false);
+            
+            // Setup event listeners for desktop login
+            setupDesktopLoginListeners();
+        }
+
+        // Show desktop certificates page
+        function showDesktopCertificatesPage() {
+            const desktopMain = document.getElementById('desktop-main');
+            desktopMain.innerHTML = `
+                <div id="desktop-certificates-section" class="section active">
+                    <div class="user-card card mb-3" id="desktop-user-card" style="display: block;">
+                        <div class="d-flex align-center justify-between">
+                            <div class="d-flex align-center gap-2">
+                                <div class="user-avatar" style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--dark);">Welcome</div>
+                                    <div style="color: var(--primary); font-weight: 600;" id="desktop-user-email"></div>
+                                </div>
+                            </div>
+                            <button id="desktop-logout-btn" class="btn btn-danger btn-icon-only">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-grid mb-3" id="desktop-stats-grid" style="display: grid;">
+                        <div class="stat-card">
+                            <div class="stat-number" id="desktop-total-certs">0</div>
+                            <div class="stat-label">Certificates</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="desktop-total-size">0 KB</div>
+                            <div class="stat-label">Total Size</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="desktop-avg-size">0 KB</div>
+                            <div class="stat-label">Avg. Size</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-center justify-between mb-3">
+                        <h2 class="section-title mb-0">My Certificates</h2>
+                        <button class="btn" id="desktop-add-cert-btn">
+                            <i class="fas fa-plus-circle"></i> Add Certificate
+                        </button>
+                    </div>
+                    
+                    <div id="desktop-cert-message" class="message"></div>
+                    
+                    <div id="desktop-certificates-container">
+                        <div id="desktop-certificates-list" class="certificates-grid">
+                            <div class="empty-state">
+                                <i class="fas fa-award"></i>
+                                <h3>No Certificates Yet</h3>
+                                <p>Click "Add Certificate" to get started</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="desktop-security-section" class="section" style="display: none;">
+                    <h2 class="section-title">Security</h2>
+                    
+                    <div id="desktop-password-message" class="message"></div>
+                    
+                    <div class="card">
+                        <div class="form-group">
+                            <label for="desktop-current-password" class="form-label">
+                                <i class="fas fa-lock"></i> Current Password
+                            </label>
+                            <div class="input-with-icon">
+                                <input type="password" id="desktop-current-password" class="form-input" placeholder="••••••••">
+                                <i class="fas fa-eye input-icon password-toggle" id="desktop-toggle-current-password"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="desktop-new-password" class="form-label">
+                                <i class="fas fa-key"></i> New Password
+                            </label>
+                            <div class="input-with-icon">
+                                <input type="password" id="desktop-new-password" class="form-input" placeholder="••••••••">
+                                <i class="fas fa-eye input-icon password-toggle" id="desktop-toggle-new-password"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="desktop-confirm-password" class="form-label">
+                                <i class="fas fa-key"></i> Confirm Password
+                            </label>
+                            <div class="input-with-icon">
+                                <input type="password" id="desktop-confirm-password" class="form-input" placeholder="••••••••">
+                                <i class="fas fa-eye input-icon password-toggle" id="desktop-toggle-confirm-password"></i>
+                            </div>
+                        </div>
+                        
+                        <button id="desktop-change-password-btn" class="btn btn-block">
+                            <i class="fas fa-sync-alt"></i> Update Password
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Update sidebar for logged in state
+            updateDesktopSidebar(true);
+            
+            // Set user email (only username before @)
+            const user = auth.currentUser;
+            if (user) {
+                const username = getUsernameFromEmail(user.email);
+                document.getElementById('desktop-user-email').textContent = username;
+            }
+            
+            // Setup event listeners for desktop
+            setupDesktopCertificateListeners();
+        }
+
+        // Update desktop sidebar based on login state
+        function updateDesktopSidebar(isLoggedIn) {
+            const desktopNav = document.getElementById('desktop-nav');
+            const desktopUserInfo = document.getElementById('desktop-user-info');
+            
+            if (isLoggedIn) {
+                const user = auth.currentUser;
+                desktopNav.innerHTML = `
+                    <a class="desktop-nav-item active" data-section="certificates">
+                        <i class="fas fa-certificate"></i>
+                        <span>Certificates</span>
+                    </a>
+                    <a class="desktop-nav-item" data-section="security">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Security</span>
+                    </a>
+                `;
+                
+                desktopUserInfo.style.display = 'block';
+                if (user) {
+                    const username = getUsernameFromEmail(user.email);
+                    document.getElementById('desktop-user-email').textContent = username;
+                }
+                
+                // Add event listeners to desktop nav items
+                document.querySelectorAll('.desktop-nav-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const section = item.getAttribute('data-section');
+                        
+                        // Update active state
+                        document.querySelectorAll('.desktop-nav-item').forEach(nav => nav.classList.remove('active'));
+                        item.classList.add('active');
+                        
+                        // Show corresponding section
+                        if (section === 'certificates') {
+                            document.getElementById('desktop-certificates-section').style.display = 'block';
+                            document.getElementById('desktop-security-section').style.display = 'none';
+                        } else if (section === 'security') {
+                            document.getElementById('desktop-certificates-section').style.display = 'none';
+                            document.getElementById('desktop-security-section').style.display = 'block';
+                        }
+                    });
+                });
+            } else {
+                desktopNav.innerHTML = `
+                    <a class="desktop-nav-item active" data-section="login">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Login</span>
+                    </a>
+                `;
+                desktopUserInfo.style.display = 'none';
+            }
+        }
+
+        // Navigation
+        function setupNavigation() {
+            // Mobile navigation
+            const mobileNavItems = document.querySelectorAll('.bottom-nav .nav-item');
+            mobileNavItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = item.getAttribute('data-section');
+                    
+                    // Update active state
+                    mobileNavItems.forEach(nav => nav.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    // Show corresponding section
+                    document.querySelectorAll('.mobile-main .section').forEach(sec => {
+                        sec.classList.remove('active');
+                    });
+                    
+                    switch(section) {
+                        case 'login':
+                            // Clear the login fields when switching to login section
+                            document.getElementById('mobile-auth-email').value = '';
+                            document.getElementById('mobile-auth-password').value = '';
+                            document.getElementById('mobile-login-section').classList.add('active');
+                            break;
+                        case 'certificates':
+                            document.getElementById('mobile-certificates-section').classList.add('active');
+                            break;
+                        case 'security':
+                            document.getElementById('mobile-security-section').classList.add('active');
+                            break;
+                    }
+                });
+            });
+        }
+
+        // Show message helper
+        function showMessage(element, message, type) {
+            if (!element) return;
+            
+            element.textContent = message;
+            element.className = `message ${type}`;
+            element.style.display = 'block';
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 4000);
+        }
+
+        // Update UI for logged in user
+        function updateUIForLoggedInUser(user) {
+            // Mobile
+            const username = getUsernameFromEmail(user.email);
+            document.getElementById('mobile-user-email').textContent = username;
+            document.getElementById('mobile-user-card').style.display = 'block';
+            document.getElementById('mobile-stats-grid').style.display = 'grid';
+            document.getElementById('mobile-fab-add-cert').style.display = 'flex';
+            
+            // Desktop
+            if (window.innerWidth >= 769) {
+                showDesktopCertificatesPage();
+                loadDesktopCertificates(user.uid);
+            }
+            
+            // Navigate to certificates on mobile
+            if (window.innerWidth < 769) {
+                document.querySelector('.bottom-nav .nav-item[data-section="certificates"]').click();
+            }
+        }
+
+        // Update UI for logged out user
+        function updateUIForLoggedOutUser() {
+            // Mobile
+            document.getElementById('mobile-user-card').style.display = 'none';
+            document.getElementById('mobile-stats-grid').style.display = 'none';
+            document.getElementById('mobile-fab-add-cert').style.display = 'none';
+            document.getElementById('mobile-certificates-list').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-award"></i>
+                    <h3>Please Login</h3>
+                    <p>Login to view your certificates</p>
+                </div>
+            `;
+            
+            // Desktop
+            if (window.innerWidth >= 769) {
+                showDesktopLoginPage();
+            }
+            
+            // Navigate to login on mobile
+            if (window.innerWidth < 769) {
+                document.querySelector('.bottom-nav .nav-item[data-section="login"]').click();
+            }
+        }
+
+        // Load certificates for mobile
+        function loadMobileCertificates(userId) {
+            const container = document.getElementById('mobile-certificates-list');
+            container.innerHTML = '<div class="loading" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i><p>Loading certificates...</p></div>';
+            
+            database.ref('users/' + userId + '/certificates').once('value')
+                .then((snapshot) => {
+                    const certificates = snapshot.val();
+                    updateMobileStats(certificates);
+                    
+                    if (!certificates) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-award"></i>
+                                <h3>No Certificates Yet</h3>
+                                <p>Tap the + button to add your first certificate</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    container.innerHTML = '';
+                    Object.keys(certificates).forEach(certId => {
+                        const cert = certificates[certId];
+                        const certElement = createCertificateElement(certId, cert, 'mobile');
+                        container.appendChild(certElement);
+                    });
+                })
+                .catch((error) => {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Error Loading</h3>
+                            <p>Could not load certificates</p>
+                        </div>
+                    `;
+                });
+        }
+
+        // Load certificates for desktop
+        function loadDesktopCertificates(userId) {
+            const container = document.getElementById('desktop-certificates-list');
+            if (!container) return;
+            
+            container.innerHTML = '<div class="loading" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i><p>Loading certificates...</p></div>';
+            
+            database.ref('users/' + userId + '/certificates').once('value')
+                .then((snapshot) => {
+                    const certificates = snapshot.val();
+                    updateDesktopStats(certificates);
+                    
+                    if (!certificates) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-award"></i>
+                                <h3>No Certificates Yet</h3>
+                                <p>Click "Add Certificate" to get started</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    container.innerHTML = '';
+                    Object.keys(certificates).forEach(certId => {
+                        const cert = certificates[certId];
+                        const certElement = createCertificateElement(certId, cert, 'desktop');
+                        container.appendChild(certElement);
+                    });
+                })
+                .catch((error) => {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Error Loading</h3>
+                            <p>Could not load certificates</p>
+                        </div>
+                    `;
+                });
+        }
+
+        // Create certificate element with onclick handlers
+        function createCertificateElement(certId, cert, platform) {
+            const div = document.createElement('div');
+            div.className = 'certificate-card';
+            div.id = `cert-${certId}-${platform}`;
+            
+            // Format expiry date
+            const expiryInfo = formatExpiryDisplay(cert.issueDate); // Note: still using issueDate field for compatibility
+            
+            div.innerHTML = `
+                <img src="${cert.imageBase64}" alt="${cert.title}" class="certificate-image">
+                <div class="certificate-content">
+                    <h3 class="certificate-title">${cert.title}</h3>
+                    <div class="certificate-detail">
+                        <i class="fas fa-hashtag"></i>
+                        <span><strong>Cert No:</strong> ${cert.certNumber || 'N/A'}</span>
+                    </div>
+                    <div class="certificate-detail">
+                        <i class="fas fa-building"></i>
+                        <span><strong>Issuer:</strong> ${cert.issuer || 'Not specified'}</span>
+                    </div>
+                    <div class="certificate-detail">
+                        <i class="fas fa-calendar-times"></i>
+                        <span><strong>Expires:</strong> ${expiryInfo.date}</span>
+                    </div>
+                    <div class="certificate-detail">
+                        <i class="fas fa-exclamation-circle ${expiryInfo.className}"></i>
+                        <span class="${expiryInfo.className}"><strong>Status:</strong> ${expiryInfo.statusText}</span>
+                    </div>
+                    <div class="certificate-detail">
+                        <i class="fas fa-hdd"></i>
+                        <span><strong>Size:</strong> ${cert.fileSizeKB || '?'} KB</span>
+                    </div>
+                    <div class="certificate-actions">
+                        <button class="btn view-certificate-btn" onclick="viewFullImage('${cert.imageBase64.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${cert.title.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">
+                            <i class="fas fa-expand"></i> View
+                        </button>
+                        <button class="btn btn-danger delete-certificate-btn" onclick="deleteCertificateNow('${certId}', '${platform}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        // Update stats
+        function updateMobileStats(certificates) {
+            if (!certificates) {
+                document.getElementById('mobile-total-certs').textContent = '0';
+                document.getElementById('mobile-total-size').textContent = '0 KB';
+                document.getElementById('mobile-avg-size').textContent = '0 KB';
+                return;
+            }
+            
+            const certsArray = Object.values(certificates);
+            const totalCerts = certsArray.length;
+            const totalSizeKB = certsArray.reduce((sum, cert) => sum + (cert.fileSizeKB || 0), 0);
+            const avgSizeKB = totalCerts > 0 ? Math.round(totalSizeKB / totalCerts) : 0;
+            
+            document.getElementById('mobile-total-certs').textContent = totalCerts;
+            document.getElementById('mobile-total-size').textContent = totalSizeKB + ' KB';
+            document.getElementById('mobile-avg-size').textContent = avgSizeKB + ' KB';
+        }
+
+        function updateDesktopStats(certificates) {
+            if (!certificates) {
+                document.getElementById('desktop-total-certs').textContent = '0';
+                document.getElementById('desktop-total-size').textContent = '0 KB';
+                document.getElementById('desktop-avg-size').textContent = '0 KB';
+                return;
+            }
+            
+            const certsArray = Object.values(certificates);
+            const totalCerts = certsArray.length;
+            const totalSizeKB = certsArray.reduce((sum, cert) => sum + (cert.fileSizeKB || 0), 0);
+            const avgSizeKB = totalCerts > 0 ? Math.round(totalSizeKB / totalCerts) : 0;
+            
+            document.getElementById('desktop-total-certs').textContent = totalCerts;
+            document.getElementById('desktop-total-size').textContent = totalSizeKB + ' KB';
+            document.getElementById('desktop-avg-size').textContent = avgSizeKB + ' KB';
+        }
+
+        // Google Sign-In function
+        function signInWithGoogle(platform) {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            
+            // Add scopes if needed
+            provider.addScope('profile');
+            provider.addScope('email');
+            
+            // Show loading message
+            let messageElement;
+            if (platform === 'mobile') {
+                messageElement = document.getElementById('mobile-auth-message');
+            } else {
+                messageElement = document.getElementById('desktop-auth-message');
+            }
+            
+            if (messageElement) {
+                showMessage(messageElement, 'Signing in with Google...', 'success');
+            }
+            
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // This gives you a Google Access Token. You can use it to access the Google API.
+                    const credential = result.credential;
+                    const token = credential.accessToken;
+                    const user = result.user;
+                    
+                    // Check if this is a new user
+                    if (result.additionalUserInfo.isNewUser) {
+                        // Save user data to Firebase
+                        database.ref('users/' + user.uid).set({
+                            email: user.email,
+                            displayName: user.displayName,
+                            photoURL: user.photoURL,
+                            provider: 'google',
+                            createdAt: firebase.database.ServerValue.TIMESTAMP
+                        });
+                        
+                        if (messageElement) {
+                            showMessage(messageElement, 'Welcome! Account created with Google.', 'success');
+                        }
+                    } else {
+                        if (messageElement) {
+                            showMessage(messageElement, 'Signed in with Google successfully!', 'success');
+                        }
+                    }
+                    
+                    // Update UI
+                    updateUIForLoggedInUser(user);
+                    
+                    // Load certificates
+                    if (platform === 'mobile') {
+                        loadMobileCertificates(user.uid);
+                    } else {
+                        loadDesktopCertificates(user.uid);
+                    }
+                })
+                .catch((error) => {
+                    // Handle Errors here.
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    // The email of the user's account used.
+                    const email = error.email;
+                    // The firebase.auth.AuthCredential type that was used.
+                    const credential = error.credential;
+                    
+                    console.error('Google Sign-In Error:', error);
+                    
+                    if (messageElement) {
+                        showMessage(messageElement, `Google Sign-In failed: ${errorMessage}`, 'error');
+                    }
+                });
+        }
+
+        // Mobile Authentication
+        function setupMobileAuthentication() {
+            // Mobile login
+            document.getElementById('mobile-login-btn').addEventListener('click', () => {
+                const email = document.getElementById('mobile-auth-email').value;
+                const password = document.getElementById('mobile-auth-password').value;
+                
+                if (!email || !password) {
+                    showMessage(document.getElementById('mobile-auth-message'), 'Please fill in all fields', 'error');
+                    return;
+                }
+                
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        showMessage(document.getElementById('mobile-auth-message'), 'Login successful!', 'success');
+                        loadMobileCertificates(userCredential.user.uid);
+                        updateUIForLoggedInUser(userCredential.user);
+                    })
+                    .catch((error) => {
+                        showMessage(document.getElementById('mobile-auth-message'), error.message, 'error');
+                    });
+            });
+
+            // Mobile register
+            document.getElementById('mobile-register-btn').addEventListener('click', () => {
+                const email = document.getElementById('mobile-auth-email').value;
+                const password = document.getElementById('mobile-auth-password').value;
+                
+                if (!email || !password) {
+                    showMessage(document.getElementById('mobile-auth-message'), 'Please fill in all fields', 'error');
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    showMessage(document.getElementById('mobile-auth-message'), 'Password must be at least 6 characters', 'error');
+                    return;
+                }
+                
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        database.ref('users/' + userCredential.user.uid).set({
+                            email: email,
+                            createdAt: firebase.database.ServerValue.TIMESTAMP
+                        });
+                        
+                        showMessage(document.getElementById('mobile-auth-message'), 'Account created successfully!', 'success');
+                        loadMobileCertificates(userCredential.user.uid);
+                        updateUIForLoggedInUser(userCredential.user);
+                    })
+                    .catch((error) => {
+                        showMessage(document.getElementById('mobile-auth-message'), error.message, 'error');
+                    });
+            });
+
+            // Mobile Google login
+            document.getElementById('mobile-google-login-btn').addEventListener('click', () => {
+                signInWithGoogle('mobile');
+            });
+
+            // Mobile logout
+            document.getElementById('mobile-logout-btn').addEventListener('click', () => {
+                auth.signOut().then(() => {
+                    // Clear all form fields
+                    document.getElementById('mobile-auth-email').value = '';
+                    document.getElementById('mobile-auth-password').value = '';
+                    document.getElementById('mobile-current-password').value = '';
+                    document.getElementById('mobile-new-password').value = '';
+                    document.getElementById('mobile-confirm-password').value = '';
+                    
+                    updateUIForLoggedOutUser();
+                    showMessage(document.getElementById('mobile-cert-message'), 'Logged out successfully', 'success');
+                });
+            });
+        }
+
+        // Desktop Authentication
+        function setupDesktopLoginListeners() {
+            // Desktop login button (dynamically created)
+            document.addEventListener('click', (e) => {
+                if (e.target.id === 'desktop-login-btn') {
+                    const email = document.getElementById('desktop-auth-email').value;
+                    const password = document.getElementById('desktop-auth-password').value;
+                    
+                    if (!email || !password) {
+                        showMessage(document.getElementById('desktop-auth-message'), 'Please fill in all fields', 'error');
+                        return;
+                    }
+                    
+                    auth.signInWithEmailAndPassword(email, password)
+                        .then((userCredential) => {
+                            showMessage(document.getElementById('desktop-auth-message'), 'Login successful!', 'success');
+                            updateUIForLoggedInUser(userCredential.user);
+                        })
+                        .catch((error) => {
+                            showMessage(document.getElementById('desktop-auth-message'), error.message, 'error');
+                        });
+                }
+                
+                if (e.target.id === 'desktop-register-btn') {
+                    const email = document.getElementById('desktop-auth-email').value;
+                    const password = document.getElementById('desktop-auth-password').value;
+                    
+                    if (!email || !password) {
+                        showMessage(document.getElementById('desktop-auth-message'), 'Please fill in all fields', 'error');
+                        return;
+                    }
+                    
+                    if (password.length < 6) {
+                        showMessage(document.getElementById('desktop-auth-message'), 'Password must be at least 6 characters', 'error');
+                        return;
+                    }
+                    
+                    auth.createUserWithEmailAndPassword(email, password)
+                        .then((userCredential) => {
+                            database.ref('users/' + userCredential.user.uid).set({
+                                email: email,
+                                createdAt: firebase.database.ServerValue.TIMESTAMP
+                            });
+                            
+                            showMessage(document.getElementById('desktop-auth-message'), 'Account created successfully!', 'success');
+                            updateUIForLoggedInUser(userCredential.user);
+                        })
+                        .catch((error) => {
+                            showMessage(document.getElementById('desktop-auth-message'), error.message, 'error');
+                        });
+                }
+                
+                if (e.target.id === 'desktop-google-login-btn') {
+                    signInWithGoogle('desktop');
+                }
+            });
+        }
+
+        function setupDesktopCertificateListeners() {
+            // Desktop logout
+            document.addEventListener('click', (e) => {
+                if (e.target.id === 'desktop-logout-btn') {
+                    auth.signOut().then(() => {
+                        // Clear all form fields
+                        const authEmailInput = document.getElementById('desktop-auth-email');
+                        const authPasswordInput = document.getElementById('desktop-auth-password');
+                        const currentPasswordInput = document.getElementById('desktop-current-password');
+                        const newPasswordInput = document.getElementById('desktop-new-password');
+                        const confirmPasswordInput = document.getElementById('desktop-confirm-password');
+                        
+                        if (authEmailInput) authEmailInput.value = '';
+                        if (authPasswordInput) authPasswordInput.value = '';
+                        if (currentPasswordInput) currentPasswordInput.value = '';
+                        if (newPasswordInput) newPasswordInput.value = '';
+                        if (confirmPasswordInput) confirmPasswordInput.value = '';
+                        
+                        updateUIForLoggedOutUser();
+                    });
+                }
+                
+                if (e.target.id === 'desktop-add-cert-btn' || e.target.id === 'desktop-add-cert') {
+                    openModal();
+                }
+                
+                if (e.target.id === 'desktop-change-password-btn') {
+                    const currentPassword = document.getElementById('desktop-current-password').value;
+                    const newPassword = document.getElementById('desktop-new-password').value;
+                    const confirmPassword = document.getElementById('desktop-confirm-password').value;
+                    
+                    if (!currentPassword || !newPassword || !confirmPassword) {
+                        showMessage(document.getElementById('desktop-password-message'), 'Please fill in all fields', 'error');
+                        return;
+                    }
+                    
+                    if (newPassword !== confirmPassword) {
+                        showMessage(document.getElementById('desktop-password-message'), 'Passwords do not match', 'error');
+                        return;
+                    }
+                    
+                    if (newPassword.length < 6) {
+                        showMessage(document.getElementById('desktop-password-message'), 'Password must be at least 6 characters', 'error');
+                        return;
+                    }
+                    
+                    const user = auth.currentUser;
+                    const email = user.email;
+                    
+                    const credential = firebase.auth.EmailAuthProvider.credential(email, currentPassword);
+                    
+                    user.reauthenticateWithCredential(credential)
+                        .then(() => user.updatePassword(newPassword))
+                        .then(() => {
+                            showMessage(document.getElementById('desktop-password-message'), 'Password updated successfully!', 'success');
+                            document.getElementById('desktop-current-password').value = '';
+                            document.getElementById('desktop-new-password').value = '';
+                            document.getElementById('desktop-confirm-password').value = '';
+                        })
+                        .catch((error) => {
+                            showMessage(document.getElementById('desktop-password-message'), error.message, 'error');
+                        });
+                }
+            });
+        }
+
+        // Password toggle
+        function setupPasswordToggles() {
+            // Mobile toggles
+            const mobileToggles = [
+                ['mobile-toggle-auth-password', 'mobile-auth-password'],
+                ['mobile-toggle-current-password', 'mobile-current-password'],
+                ['mobile-toggle-new-password', 'mobile-new-password'],
+                ['mobile-toggle-confirm-password', 'mobile-confirm-password']
+            ];
+            
+            mobileToggles.forEach(([toggleId, inputId]) => {
+                const toggle = document.getElementById(toggleId);
+                const input = document.getElementById(inputId);
+                
+                if (toggle && input) {
+                    toggle.addEventListener('click', () => {
+                        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                        input.setAttribute('type', type);
+                        toggle.classList.toggle('fa-eye');
+                        toggle.classList.toggle('fa-eye-slash');
+                    });
+                }
+            });
+            
+            // Desktop toggles (will be setup when elements are created)
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('password-toggle')) {
+                    const inputId = e.target.id.replace('toggle-', '').replace('desktop-', 'desktop-');
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                        input.setAttribute('type', type);
+                        e.target.classList.toggle('fa-eye');
+                        e.target.classList.toggle('fa-eye-slash');
+                    }
+                }
+            });
+        }
+
+        // Change password (mobile)
+        document.getElementById('mobile-change-password-btn').addEventListener('click', () => {
+            const currentPassword = document.getElementById('mobile-current-password').value;
+            const newPassword = document.getElementById('mobile-new-password').value;
+            const confirmPassword = document.getElementById('mobile-confirm-password').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showMessage(document.getElementById('mobile-password-message'), 'Please fill in all fields', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showMessage(document.getElementById('mobile-password-message'), 'Passwords do not match', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showMessage(document.getElementById('mobile-password-message'), 'Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            const user = auth.currentUser;
+            const email = user.email;
+            
+            const credential = firebase.auth.EmailAuthProvider.credential(email, currentPassword);
+            
+            user.reauthenticateWithCredential(credential)
+                .then(() => user.updatePassword(newPassword))
+                .then(() => {
+                    showMessage(document.getElementById('mobile-password-message'), 'Password updated successfully!', 'success');
+                    document.getElementById('mobile-current-password').value = '';
+                    document.getElementById('mobile-new-password').value = '';
+                    document.getElementById('mobile-confirm-password').value = '';
+                })
+                .catch((error) => {
+                    showMessage(document.getElementById('mobile-password-message'), error.message, 'error');
+                });
         });
-        updateTotal();
-      }).catch(error => console.error("Load Error:", error));
-    }
 
-    function deleteEntry(key) {
-      database.ref('entries/' + key).remove().then(loadEntries).catch(error => console.error("Delete Error:", error));
-    }
+        // Modal functionality
+        let selectedFile = null;
+        let compressedImageBase64 = null;
 
-    document.getElementById('entryForm').addEventListener('submit', e => {
-      e.preventDefault();
-      const date = document.getElementById('entryDate').value;
-      const amount = document.getElementById('entryAmount').value;
-      const entry = { date, amount: parseFloat(amount) };
-      database.ref('entries').push(entry)
-        .then(() => {
-          console.log("Data saved");
-          document.getElementById('entryForm').reset();
-          closePopup();
-          loadEntries();
-        })
-        .catch(error => console.error("Save Error:", error));
-    });
+        function openModal() {
+            document.getElementById('certificate-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Set max date to 100 years from now for expiry (allows longer certificate validity)
+            const today = new Date();
+            const maxDate = new Date();
+            maxDate.setFullYear(today.getFullYear() + 100); // Changed from +5 to +100
+            
+            // Format dates for input
+            const todayStr = today.toISOString().split('T')[0];
+            const maxDateStr = maxDate.toISOString().split('T')[0];
+            
+            document.getElementById('modal-expiry-date').value = todayStr;
+            document.getElementById('modal-expiry-date').min = todayStr;
+            document.getElementById('modal-expiry-date').max = maxDateStr;
+            
+            // Reset form
+            document.getElementById('certificate-form').reset();
+            selectedFile = null;
+            compressedImageBase64 = null;
+            document.getElementById('modal-image-preview-container').style.display = 'none';
+            
+            // Ensure save button is visible and properly configured
+            const saveButton = document.getElementById('save-certificate-modal');
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fas fa-save"></i> Save Certificate';
+            saveButton.style.opacity = '1';
+            saveButton.style.cursor = 'not-allowed';
+            saveButton.style.display = 'inline-flex';
+        }
 
-    searchInput.addEventListener('input', () => {
-      const filter = searchInput.value.toLowerCase();
-      tableBody.querySelectorAll('tr').forEach(row => {
-        const date = row.cells[1].textContent.toLowerCase();
-        row.style.display = date.includes(filter) ? '' : 'none';
-      });
-      updateTotal();
-    });
+        function closeModal() {
+            document.getElementById('certificate-modal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            
+            // Reset save button state
+            const saveButton = document.getElementById('save-certificate-modal');
+            saveButton.disabled = false;
+            saveButton.innerHTML = '<i class="fas fa-save"></i> Save Certificate';
+            saveButton.style.opacity = '1';
+            saveButton.style.cursor = 'pointer';
+            saveButton.style.display = 'inline-flex';
+        }
 
-    function openPopup() {
-      document.getElementById('popup').style.display = 'block';
-      setTimeout(() => document.getElementById('entryDate').focus(), 100);
-    }
+        // Setup modal listeners
+        function setupModalListeners() {
+            // Open modal from various buttons
+            document.getElementById('mobile-fab-add-cert')?.addEventListener('click', openModal);
+            document.getElementById('desktop-add-cert')?.addEventListener('click', openModal);
+            
+            // Close modal events
+            document.getElementById('close-certificate-modal').addEventListener('click', closeModal);
+            document.getElementById('cancel-certificate-modal').addEventListener('click', closeModal);
+            document.getElementById('certificate-modal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('certificate-modal')) closeModal();
+            });
+            
+            // Close image modal
+            document.getElementById('close-image-modal').addEventListener('click', () => {
+                document.getElementById('image-view-modal').classList.remove('active');
+                document.body.style.overflow = 'auto';
+            });
+            document.getElementById('image-view-modal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('image-view-modal')) {
+                    document.getElementById('image-view-modal').classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                }
+            });
 
-    function closePopup() {
-      document.getElementById('popup').style.display = 'none';
-    }
+            // File upload
+            document.getElementById('file-upload-area').addEventListener('click', () => {
+                document.getElementById('modal-cert-image-file').click();
+            });
+            
+            document.getElementById('modal-cert-image-file').addEventListener('change', handleFileSelect);
 
-    window.onload = loadEntries;
-  </script>
+            async function handleFileSelect(e) {
+                const file = e.target.files[0];
+                
+                if (!file) return;
+                
+                if (file.size > 2 * 1024 * 1024) {
+                    showMessage(document.getElementById('modal-message'), 'File size exceeds 2MB limit', 'error');
+                    return;
+                }
+                
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    showMessage(document.getElementById('modal-message'), 'Invalid file type. Please upload JPG, PNG, or WebP images.', 'error');
+                    return;
+                }
+                
+                selectedFile = file;
+                document.getElementById('save-certificate-modal').disabled = true;
+                document.getElementById('save-certificate-modal').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                
+                // Simulate compression
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    compressedImageBase64 = event.target.result;
+                    
+                    // Show preview
+                    document.getElementById('modal-image-preview').src = compressedImageBase64;
+                    document.getElementById('modal-image-preview-container').style.display = 'block';
+                    
+                    // Update size info
+                    const fileSizeKB = Math.round(file.size / 1024);
+                    document.getElementById('modal-image-size-info').textContent = `File size: ${fileSizeKB} KB`;
+                    document.getElementById('modal-image-size-info').style.color = '#28a745';
+                    
+                    document.getElementById('save-certificate-modal').disabled = false;
+                    document.getElementById('save-certificate-modal').innerHTML = '<i class="fas fa-save"></i> Save Certificate';
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // Save certificate
+            document.getElementById('save-certificate-modal').addEventListener('click', async () => {
+                const saveButton = document.getElementById('save-certificate-modal');
+                const user = auth.currentUser;
+                
+                if (!user) {
+                    showMessage(document.getElementById('modal-message'), 'Please login first', 'error');
+                    return;
+                }
+                
+                const title = document.getElementById('modal-cert-title').value;
+                const certNumber = document.getElementById('modal-cert-number').value;
+                const issuer = document.getElementById('modal-cert-issuer').value;
+                const expiryDate = document.getElementById('modal-expiry-date').value;
+                
+                if (!title || !certNumber || !expiryDate) {
+                    showMessage(document.getElementById('modal-message'), 'Please fill in all required fields', 'error');
+                    return;
+                }
+                
+                if (!compressedImageBase64) {
+                    showMessage(document.getElementById('modal-message'), 'Please select a certificate image', 'error');
+                    return;
+                }
+                
+                const certId = database.ref().child('certificates').push().key;
+                
+                try {
+                    // Disable the save button immediately and change its appearance
+                    saveButton.disabled = true;
+                    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                    saveButton.style.opacity = '0.7';
+                    saveButton.style.cursor = 'not-allowed';
+                    
+                    // Calculate approximate size
+                    const base64SizeKB = Math.round((compressedImageBase64.length * 3) / 4 / 1024);
+                    
+                    // Save with expiry date (still using issueDate field for compatibility with existing data)
+                    await database.ref('users/' + user.uid + '/certificates/' + certId).set({
+                        title: title,
+                        certNumber: certNumber,
+                        issuer: issuer,
+                        issueDate: expiryDate, // Now storing expiry date
+                        imageBase64: compressedImageBase64,
+                        fileName: selectedFile.name,
+                        fileType: selectedFile.type,
+                        fileSizeKB: base64SizeKB,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    
+                    // Hide the save button completely after successful save
+                    saveButton.style.display = 'none';
+                    
+                    // Show success message based on current view
+                    if (window.innerWidth >= 769) {
+                        showMessage(document.getElementById('desktop-cert-message'), 'Certificate saved successfully!', 'success');
+                        loadDesktopCertificates(user.uid);
+                    } else {
+                        showMessage(document.getElementById('mobile-cert-message'), 'Certificate saved successfully!', 'success');
+                        loadMobileCertificates(user.uid);
+                    }
+                    
+                    // Close modal after a short delay
+                    setTimeout(() => {
+                        closeModal();
+                        // Reset save button for next use (when modal opens again)
+                        setTimeout(() => {
+                            saveButton.style.display = 'inline-flex';
+                            saveButton.innerHTML = '<i class="fas fa-save"></i> Save Certificate';
+                            saveButton.style.opacity = '1';
+                            saveButton.style.cursor = 'pointer';
+                        }, 300);
+                    }, 1000);
+                    
+                } catch (error) {
+                    // If there's an error, re-enable the save button
+                    saveButton.disabled = false;
+                    saveButton.innerHTML = '<i class="fas fa-save"></i> Save Certificate';
+                    saveButton.style.opacity = '1';
+                    saveButton.style.cursor = 'pointer';
+                    
+                    showMessage(document.getElementById('modal-message'), `Error: ${error.message}`, 'error');
+                }
+            });
+        }
+
+        // Auth state listener
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                updateUIForLoggedInUser(user);
+                if (window.innerWidth >= 769) {
+                    loadDesktopCertificates(user.uid);
+                } else {
+                    loadMobileCertificates(user.uid);
+                }
+            } else {
+                updateUIForLoggedOutUser();
+            }
+        });
+
+        // Window resize handler
+        window.addEventListener('resize', initializeUI);
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeUI();
+            setupNavigation();
+            setupMobileAuthentication();
+            setupPasswordToggles();
+            setupModalListeners();
+        });
+    </script>
 </body>
 </html>
